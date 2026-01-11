@@ -8,7 +8,10 @@ Creates receipt-level features for machine learning models.
 import pandas as pd
 import numpy as np
 from typing import List, Tuple, Optional
-from .data_loader import SAUCES
+try:
+    from .data_loader import SAUCES
+except ImportError:
+    from data_loader import SAUCES
 
 
 def create_receipt_features(df: pd.DataFrame, 

@@ -1,2 +1,6 @@
 # Models package
-from .logistic_regression import LogisticRegressionScratch
+from .logistic_regression import LogisticRegression, LogisticRegressionScratch
+from .evaluation import (
+    accuracy, precision, recall, f1_score, 
+    confusion_matrix, classification_report, print_classification_report
+)
