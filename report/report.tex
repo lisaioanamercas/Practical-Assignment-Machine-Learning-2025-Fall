@@ -1,0 +1,370 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[romanian]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{geometry}
+\usepackage{subcaption}
+
+\geometry{margin=2.5cm}
+
+% Code listing style
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{gray},
+    stringstyle=\color{orange},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    breaklines=true,
+    frame=single
+}
+
+\title{Practical Assignment - Machine Learning 2025 Fall\\
+\large Restaurant Sales Analysis: Sauce Prediction and Product Ranking}
+\author{[Your Name Here]}
+\date{January 2025}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Acest raport prezintă implementarea și analiza unor algoritmi de Machine Learning aplicați pe un set de date cu tranzacții dintr-un restaurant. Scopul principal este de a prezice dacă un client va cumpăra un sos și de a crea un sistem de ranking pentru produse cu potențial de upselling. Am implementat Logistic Regression from scratch folosind Gradient Descent, precum și Naive Bayes și k-NN pentru ranking. Rezultatele arată că...
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+%==============================================================================
+\section{Introducere}
+%==============================================================================
+
+\subsection{Descrierea Problemei}
+Acest proiect abordează analiza datelor de vânzări dintr-un restaurant pentru a:
+\begin{enumerate}
+    \item \textbf{LR \#1}: Prezice dacă un client care comandă Crazy Schnitzel va cumpăra și Crazy Sauce
+    \item \textbf{LR \#2}: Crea un sistem de recomandare pentru sosuri multiple
+    \item \textbf{Ranking}: Construi un sistem de ranking pentru produse cu potențial de upselling
+\end{enumerate}
+
+\subsection{Descrierea Dataset-ului}
+Dataset-ul conține tranzacții de la un restaurant, cu următoarele caracteristici:
+
+\begin{table}[H]
+\centering
+\begin{tabular}{ll}
+\toprule
+\textbf{Statistică} & \textbf{Valoare} \\
+\midrule
+Perioada & 5 Septembrie - 3 Decembrie 2025 \\
+Total bonuri & 7,869 \\
+Total linii & 28,039 \\
+Produse unice & 59 \\
+Coș mediu & 3.56 produse per bon \\
+\bottomrule
+\end{tabular}
+\caption{Statistici dataset}
+\label{tab:dataset-stats}
+\end{table}
+
+\subsubsection{Coloane Utilizate}
+\begin{itemize}
+    \item \texttt{id\_bon} -- Identificator unic pentru fiecare bon/tranzacție
+    \item \texttt{data\_bon} -- Data și ora tranzacției
+    \item \texttt{retail\_product\_name} -- Numele produsului
+    \item \texttt{SalePriceWithVAT} -- Prețul cu TVA
+\end{itemize}
+
+\subsubsection{Sosuri Standalone}
+Sosurile analizate sunt: Crazy Sauce, Cheddar Sauce, Extra Cheddar Sauce, Garlic Sauce, Tomato Sauce, Blueberry Sauce, Spicy Sauce, Pink Sauce.
+
+%==============================================================================
+\section{Preprocesarea Datelor}
+%==============================================================================
+
+\subsection{Feature Engineering}
+Pentru a transforma datele brute în features utilizabile de algoritmi, am aplicat:
+
+\subsubsection{Vectorul de Produse}
+Pentru fiecare produs $p$ dintr-un bon, am creat:
+\begin{itemize}
+    \item \texttt{has\_p} -- variabilă binară (1 dacă produsul este în coș, 0 altfel)
+    \item \texttt{count\_p} -- numărul de apariții ale produsului în coș
+\end{itemize}
+
+\subsubsection{Agregări la Nivel de Coș}
+\begin{itemize}
+    \item \texttt{cart\_size} -- numărul total de produse din coș
+    \item \texttt{distinct\_products} -- numărul de produse unice
+    \item \texttt{total\_value} -- $\sum$ SalePriceWithVAT
+\end{itemize}
+
+\subsubsection{Features Temporale}
+\begin{itemize}
+    \item \texttt{day\_of\_week} -- ziua săptămânii (1-7)
+    \item \texttt{hour} -- ora tranzacției
+    \item \texttt{is\_weekend} -- 1 dacă weekend, 0 altfel
+\end{itemize}
+
+\subsection{Împărțirea Datelor}
+Am împărțit datele la nivel de \textbf{bon} (nu pe rânduri individuale) pentru a evita data leakage:
+\begin{itemize}
+    \item Training set: 80\% din bonuri
+    \item Test set: 20\% din bonuri
+    \item Stratified split pentru a menține proporțiile claselor
+\end{itemize}
+
+%==============================================================================
+\section{Logistic Regression \#1: Crazy Sauce Prediction}
+%==============================================================================
+
+\subsection{Formularea Problemei}
+\textbf{Obiectiv}: Pentru bonurile care conțin Crazy Schnitzel, prezice dacă bonul conține și Crazy Sauce.
+
+\begin{itemize}
+    \item \textbf{Input (X)}: Features ce descriu conținutul coșului (excluzând toate sosurile)
+    \item \textbf{Output (y)}: 1 dacă Crazy Sauce este în coș, 0 altfel
+\end{itemize}
+
+\subsection{Implementare Logistic Regression from Scratch}
+
+\subsubsection{Funcția Sigmoid}
+\begin{equation}
+\sigma(z) = \frac{1}{1 + e^{-z}}
+\end{equation}
+
+\subsubsection{Cross-Entropy Loss}
+\begin{equation}
+\mathcal{L}(\theta) = -\frac{1}{m}\sum_{i=1}^{m}\left[y^{(i)}\log(\hat{y}^{(i)}) + (1-y^{(i)})\log(1-\hat{y}^{(i)})\right]
+\end{equation}
+
+\subsubsection{Gradient Descent Update}
+\begin{equation}
+\theta := \theta - \alpha \cdot \frac{1}{m}X^T(\sigma(X\theta) - y)
+\end{equation}
+
+unde $\alpha$ este learning rate-ul.
+
+\subsubsection{Regularizare L2}
+Am adăugat regularizare L2 pentru a preveni overfitting-ul:
+\begin{equation}
+\mathcal{L}_{reg}(\theta) = \mathcal{L}(\theta) + \frac{\lambda}{2m}\sum_{j=1}^{n}\theta_j^2
+\end{equation}
+
+\subsection{Rezultate}
+
+% TODO: Add actual results from notebook
+\begin{table}[H]
+\centering
+\begin{tabular}{lc}
+\toprule
+\textbf{Metrică} & \textbf{Valoare} \\
+\midrule
+Accuracy & -- \\
+Precision & -- \\
+Recall & -- \\
+F1 Score & -- \\
+ROC-AUC & -- \\
+\bottomrule
+\end{tabular}
+\caption{Rezultate LR \#1 pe setul de test}
+\label{tab:lr1-results}
+\end{table}
+
+\begin{figure}[H]
+\centering
+% \includegraphics[width=0.8\textwidth]{../results/lr1_confusion_matrix.png}
+\caption{Matricea de confuzie pentru LR \#1}
+\label{fig:lr1-confusion}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+% \includegraphics[width=0.8\textwidth]{../results/lr1_roc_curve.png}
+\caption{Curba ROC pentru LR \#1}
+\label{fig:lr1-roc}
+\end{figure}
+
+\subsection{Interpretarea Coeficienților}
+Coeficienții cu valori pozitive mari indică produse care cresc probabilitatea de a cumpăra Crazy Sauce, în timp ce coeficienții negativi indică produse care scad această probabilitate.
+
+% TODO: Add feature importance table
+
+\subsection{Comparație cu Baseline}
+Baseline-ul (majority class) prezice întotdeauna clasa majoritară. Rezultatele arată că modelul nostru...
+
+%==============================================================================
+\section{Logistic Regression \#2: Multi-Sauce Recommendation}
+%==============================================================================
+
+\subsection{Formularea Problemei}
+Pentru fiecare sos $s$ din lista de sosuri, am antrenat un model separat:
+\begin{itemize}
+    \item \textbf{Input (X)}: Features ale coșului (excluzând toate sosurile)
+    \item \textbf{Output ($y_s$)}: 1 dacă sosul $s$ este în coș, 0 altfel
+\end{itemize}
+
+\subsection{Pseudo-Recomandare}
+Pentru un coș dat (fără sos), calculăm $P(s | \text{coș})$ pentru fiecare sos și recomandăm Top-K sosuri cu probabilitatea cea mai mare.
+
+\subsection{Rezultate Comparative}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Sos} & \textbf{Base Rate} & \textbf{Accuracy} & \textbf{Precision} & \textbf{Recall} & \textbf{F1} \\
+\midrule
+Crazy Sauce & -- & -- & -- & -- & -- \\
+Cheddar Sauce & -- & -- & -- & -- & -- \\
+Garlic Sauce & -- & -- & -- & -- & -- \\
+% TODO: Complete table
+\bottomrule
+\end{tabular}
+\caption{Performanța modelelor per sos}
+\label{tab:lr2-results}
+\end{table}
+
+\subsection{Evaluare Hit@K}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lccc}
+\toprule
+\textbf{Metodă} & \textbf{Hit@1} & \textbf{Hit@3} & \textbf{Hit@5} \\
+\midrule
+Model LR & -- & -- & -- \\
+Baseline (Popularity) & -- & -- & -- \\
+\bottomrule
+\end{tabular}
+\caption{Hit@K pentru recomandare sosuri}
+\label{tab:hit-at-k}
+\end{table}
+
+%==============================================================================
+\section{Ranking pentru Upselling}
+%==============================================================================
+
+\subsection{Formularea Problemei}
+Scopul este de a construi o metodă care produce o ierarhie de produse candidate pentru upselling.
+
+\subsubsection{Scor de Ranking}
+\begin{equation}
+\text{Score}(p | \text{coș}) = P(p | \text{coș}) \times \text{price}(p)
+\end{equation}
+
+Acest scor maximizează valoarea așteptată a vânzărilor.
+
+\subsection{Algoritmi Implementați}
+
+\subsubsection{Naive Bayes (from scratch)}
+Am implementat Gaussian Naive Bayes pentru estimarea $P(p | \text{coș})$:
+\begin{equation}
+P(C_k | x) = \frac{P(C_k) \prod_{i=1}^{n} P(x_i | C_k)}{P(x)}
+\end{equation}
+
+unde presupunem că features sunt distribuite Gaussian:
+\begin{equation}
+P(x_i | C_k) = \frac{1}{\sqrt{2\pi\sigma_{ki}^2}}\exp\left(-\frac{(x_i - \mu_{ki})^2}{2\sigma_{ki}^2}\right)
+\end{equation}
+
+\subsubsection{k-Nearest Neighbors (from scratch)}
+Am implementat k-NN cu voting ponderat după distanță:
+\begin{equation}
+P(C | x) = \frac{\sum_{i \in N_k(x)} w_i \cdot \mathbb{1}[y_i = C]}{\sum_{i \in N_k(x)} w_i}
+\end{equation}
+
+unde $w_i = \frac{1}{d(x, x_i)}$ pentru voting ponderat.
+
+\subsection{Experimental Setup}
+Pentru evaluare, pentru fiecare bon din test:
+\begin{enumerate}
+    \item Construim un "coș parțial" eliminând 1 produs
+    \item Încercăm să recuperăm produsul prin ranking
+    \item Verificăm dacă produsul eliminat apare în Top-K
+\end{enumerate}
+
+\subsection{Rezultate}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Algoritm} & \textbf{Hit@1} & \textbf{Hit@3} & \textbf{Hit@5} & \textbf{MRR} \\
+\midrule
+Naive Bayes (scratch) & -- & -- & -- & -- \\
+k-NN (scratch) & -- & -- & -- & -- \\
+Baseline (Popularity) & -- & -- & -- & -- \\
+Baseline (Revenue) & -- & -- & -- & -- \\
+\bottomrule
+\end{tabular}
+\caption{Performanța algoritmilor de ranking}
+\label{tab:ranking-results}
+\end{table}
+
+%==============================================================================
+\section{Concluzii}
+%==============================================================================
+
+\subsection{Rezultate Principale}
+\begin{itemize}
+    \item Pentru predicția Crazy Sauce, modelul de Logistic Regression atins...
+    \item Sistemul de recomandare multi-sos...
+    \item Ranking-ul bazat pe Expected Value...
+\end{itemize}
+
+\subsection{Direcții de Îmbunătățire}
+\begin{enumerate}
+    \item Utilizarea de features suplimentare (sezonalitate, historicul clientului)
+    \item Ensemble methods (combinarea mai multor algoritmi)
+    \item Optimizarea hiperparametrilor prin cross-validation
+    \item Implementarea unui sistem online de recomandare
+\end{enumerate}
+
+%==============================================================================
+\section{Contribuții}
+%==============================================================================
+
+\begin{itemize}
+    \item \textbf{[Nume 1]}: Implementare Logistic Regression, preprocesare date, EDA
+    \item \textbf{[Nume 2]}: Implementare Ranking (Naive Bayes, k-NN), evaluare, raport
+\end{itemize}
+
+%==============================================================================
+\section{Anexe}
+%==============================================================================
+
+\subsection{Instrucțiuni de Rulare}
+
+\begin{lstlisting}[language=bash]
+# Install dependencies
+pip install -r requirements.txt
+
+# Run notebooks
+jupyter notebook notebooks/
+\end{lstlisting}
+
+\subsection{Structura Repository}
+\begin{verbatim}
+├── data/raw/           # Dataset
+├── data/processed/     # Preprocessed features
+├── src/                # Source code
+│   ├── data_loader.py
+│   ├── preprocessing.py
+│   └── models/
+│       ├── logistic_regression.py
+│       ├── evaluation.py
+│       └── ranking.py
+├── notebooks/          # Jupyter notebooks
+├── results/            # Generated figures
+└── report/             # LaTeX report
+\end{verbatim}
+
+\end{document}

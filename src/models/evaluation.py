@@ -183,3 +183,101 @@ def print_classification_report(y_true: np.ndarray, y_pred: np.ndarray) -> None:
     print(f"  F1 Score:    {report['f1_score']:.4f}")
     print(f"  Specificity: {report['specificity']:.4f}")
     print("=" * 50)
+
+
+def roc_curve(y_true: np.ndarray, y_proba: np.ndarray, n_thresholds: int = 100):
+    """
+    Calculate ROC curve data points.
+    
+    Args:
+        y_true: True binary labels
+        y_proba: Predicted probabilities for positive class
+        n_thresholds: Number of threshold points
+        
+    Returns:
+        Tuple of (fpr, tpr, thresholds)
+    """
+    thresholds = np.linspace(0, 1, n_thresholds)
+    tpr_list = []
+    fpr_list = []
+    
+    for thresh in thresholds:
+        y_pred = (y_proba >= thresh).astype(int)
+        
+        # True positives and false positives
+        tp = np.sum((y_true == 1) & (y_pred == 1))
+        fn = np.sum((y_true == 1) & (y_pred == 0))
+        fp = np.sum((y_true == 0) & (y_pred == 1))
+        tn = np.sum((y_true == 0) & (y_pred == 0))
+        
+        # TPR = TP / (TP + FN)
+        tpr = tp / (tp + fn) if (tp + fn) > 0 else 0
+        # FPR = FP / (FP + TN)
+        fpr = fp / (fp + tn) if (fp + tn) > 0 else 0
+        
+        tpr_list.append(tpr)
+        fpr_list.append(fpr)
+    
+    return np.array(fpr_list), np.array(tpr_list), thresholds
+
+
+def roc_auc_score(y_true: np.ndarray, y_proba: np.ndarray) -> float:
+    """
+    Calculate ROC-AUC score using trapezoidal rule.
+    
+    Args:
+        y_true: True binary labels
+        y_proba: Predicted probabilities for positive class
+        
+    Returns:
+        ROC-AUC score
+    """
+    fpr, tpr, _ = roc_curve(y_true, y_proba)
+    
+    # Sort by FPR for proper integration
+    sorted_indices = np.argsort(fpr)
+    fpr_sorted = fpr[sorted_indices]
+    tpr_sorted = tpr[sorted_indices]
+    
+    # Trapezoidal rule for AUC
+    auc = np.trapz(tpr_sorted, fpr_sorted)
+    
+    return auc
+
+
+def plot_roc_curve(y_true: np.ndarray, y_proba: np.ndarray, 
+                   title: str = "ROC Curve", save_path: str = None):
+    """
+    Plot ROC curve (requires matplotlib).
+    
+    Args:
+        y_true: True binary labels
+        y_proba: Predicted probabilities
+        title: Plot title
+        save_path: Optional path to save figure
+    """
+    import matplotlib.pyplot as plt
+    
+    fpr, tpr, _ = roc_curve(y_true, y_proba)
+    auc = roc_auc_score(y_true, y_proba)
+    
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.plot(fpr, tpr, 'b-', linewidth=2, label=f'ROC Curve (AUC = {auc:.4f})')
+    ax.plot([0, 1], [0, 1], 'r--', linewidth=1, label='Random Classifier')
+    ax.fill_between(fpr, tpr, alpha=0.3)
+    
+    ax.set_xlabel('False Positive Rate')
+    ax.set_ylabel('True Positive Rate')
+    ax.set_title(title)
+    ax.legend(loc='lower right')
+    ax.grid(True, alpha=0.3)
+    ax.set_xlim([0, 1])
+    ax.set_ylim([0, 1])
+    
+    plt.tight_layout()
+    
+    if save_path:
+        plt.savefig(save_path, dpi=150, bbox_inches='tight')
+    
+    return fig, ax
+
