@@ -28,7 +28,7 @@
 
 \title{Practical Assignment - Machine Learning 2025 Fall\\
 \large Restaurant Sales Analysis: Sauce Prediction and Product Ranking}
-\author{[Your Name Here]}
+\author{Elisa Mercas \& Denis Munteanu}
 \date{January 2025}
 
 \begin{document}
@@ -36,7 +36,7 @@
 \maketitle
 
 \begin{abstract}
-Acest raport prezintă implementarea și analiza unor algoritmi de Machine Learning aplicați pe un set de date cu tranzacții dintr-un restaurant. Scopul principal este de a prezice dacă un client va cumpăra un sos și de a crea un sistem de ranking pentru produse cu potențial de upselling. Am implementat Logistic Regression from scratch folosind Gradient Descent, precum și Naive Bayes și k-NN pentru ranking. Rezultatele arată că...
+Acest raport prezintă implementarea și analiza unor algoritmi de Machine Learning aplicați pe un set de date cu tranzacții dintr-un restaurant. Scopul principal este de a prezice dacă un client va cumpăra un sos și de a crea un sistem de ranking pentru produse cu potențial de upselling. Am implementat Logistic Regression from scratch folosind Gradient Descent, precum și Naive Bayes și k-NN pentru ranking. Rezultatele arată că modelul LR \#1 obține un F1-score de 0.76 pentru predicția Crazy Sauce, iar pentru ranking, baseline-ul de popularitate obține cele mai bune rezultate cu Hit@5 de 0.66.
 \end{abstract}
 
 \tableofcontents
@@ -68,10 +68,31 @@ Total bonuri & 7,869 \\
 Total linii & 28,039 \\
 Produse unice & 59 \\
 Coș mediu & 3.56 produse per bon \\
+Valoare medie coș & 67.87 RON \\
 \bottomrule
 \end{tabular}
 \caption{Statistici dataset}
 \label{tab:dataset-stats}
+\end{table}
+
+\subsubsection{Distribuția pe Categorii}
+\begin{table}[H]
+\centering
+\begin{tabular}{lc}
+\toprule
+\textbf{Categorie} & \textbf{Vânzări} \\
+\midrule
+Schnitzel & 6,978 \\
+Sauce & 6,117 \\
+Drinks & 5,962 \\
+Mac \& Cheese & 3,546 \\
+Sides & 2,918 \\
+Other & 2,312 \\
+Salad & 206 \\
+\bottomrule
+\end{tabular}
+\caption{Distribuția vânzărilor pe categorii}
+\label{tab:category-dist}
 \end{table}
 
 \subsubsection{Coloane Utilizate}
@@ -83,7 +104,27 @@ Coș mediu & 3.56 produse per bon \\
 \end{itemize}
 
 \subsubsection{Sosuri Standalone}
-Sosurile analizate sunt: Crazy Sauce, Cheddar Sauce, Extra Cheddar Sauce, Garlic Sauce, Tomato Sauce, Blueberry Sauce, Spicy Sauce, Pink Sauce.
+Sosurile analizate sunt prezentate în tabelul \ref{tab:sauce-sales}.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lcc}
+\toprule
+\textbf{Sos} & \textbf{Vânzări} & \textbf{Procent} \\
+\midrule
+Crazy Sauce & 1,662 & 20.3\% \\
+Cheddar Sauce & 1,100 & 13.1\% \\
+Garlic Sauce & 778 & 9.4\% \\
+Blueberry Sauce & 743 & 9.0\% \\
+Spicy Sauce & 386 & 4.9\% \\
+Tomato Sauce & 212 & 2.7\% \\
+Pink Sauce & 147 & 1.9\% \\
+Extra Cheddar Sauce & 24 & 0.3\% \\
+\bottomrule
+\end{tabular}
+\caption{Vânzări sosuri (Total: 5,052 = 18\% din toate vânzările)}
+\label{tab:sauce-sales}
+\end{table}
 
 %==============================================================================
 \section{Preprocesarea Datelor}
@@ -129,8 +170,10 @@ Am împărțit datele la nivel de \textbf{bon} (nu pe rânduri individuale) pent
 \textbf{Obiectiv}: Pentru bonurile care conțin Crazy Schnitzel, prezice dacă bonul conține și Crazy Sauce.
 
 \begin{itemize}
-    \item \textbf{Input (X)}: Features ce descriu conținutul coșului (excluzând toate sosurile)
+    \item \textbf{Input (X)}: 56 features ce descriu conținutul coșului (excluzând toate sosurile)
     \item \textbf{Output (y)}: 1 dacă Crazy Sauce este în coș, 0 altfel
+    \item \textbf{Dataset}: 1,783 bonuri cu Crazy Schnitzel
+    \item \textbf{Rată conversie}: 53.2\% (948 din 1,783 bonuri conțin și Crazy Sauce)
 \end{itemize}
 
 \subsection{Implementare Logistic Regression from Scratch}
@@ -150,55 +193,100 @@ Am împărțit datele la nivel de \textbf{bon} (nu pe rânduri individuale) pent
 \theta := \theta - \alpha \cdot \frac{1}{m}X^T(\sigma(X\theta) - y)
 \end{equation}
 
-unde $\alpha$ este learning rate-ul.
+unde $\alpha = 0.1$ este learning rate-ul.
 
 \subsubsection{Regularizare L2}
-Am adăugat regularizare L2 pentru a preveni overfitting-ul:
+Am adăugat regularizare L2 ($\lambda = 0.01$) pentru a preveni overfitting-ul:
 \begin{equation}
 \mathcal{L}_{reg}(\theta) = \mathcal{L}(\theta) + \frac{\lambda}{2m}\sum_{j=1}^{n}\theta_j^2
 \end{equation}
 
+\subsubsection{Antrenare}
+Modelul a fost antrenat pe 1,000 de iterații, cu loss-ul scăzând de la 0.6931 (inițial) la 0.5575 (final).
+
 \subsection{Rezultate}
 
-% TODO: Add actual results from notebook
 \begin{table}[H]
 \centering
 \begin{tabular}{lc}
 \toprule
 \textbf{Metrică} & \textbf{Valoare} \\
 \midrule
-Accuracy & -- \\
-Precision & -- \\
-Recall & -- \\
-F1 Score & -- \\
-ROC-AUC & -- \\
+Accuracy & 0.6975 \\
+Precision & 0.6565 \\
+Recall & 0.9053 \\
+F1 Score & 0.7611 \\
+Specificity & 0.4611 \\
 \bottomrule
 \end{tabular}
-\caption{Rezultate LR \#1 pe setul de test}
+\caption{Rezultate LR \#1 pe setul de test (357 samples)}
 \label{tab:lr1-results}
+\end{table}
+
+\subsubsection{Matricea de Confuzie}
+\begin{table}[H]
+\centering
+\begin{tabular}{l|cc}
+& \textbf{Predicted Neg} & \textbf{Predicted Pos} \\
+\midrule
+\textbf{Actual Neg} & 77 & 90 \\
+\textbf{Actual Pos} & 18 & 172 \\
+\end{tabular}
+\caption{Matricea de confuzie LR \#1}
+\label{tab:lr1-confusion}
 \end{table}
 
 \begin{figure}[H]
 \centering
-% \includegraphics[width=0.8\textwidth]{../results/lr1_confusion_matrix.png}
+\includegraphics[width=0.7\textwidth]{../results/lr1_confusion_matrix.png}
 \caption{Matricea de confuzie pentru LR \#1}
 \label{fig:lr1-confusion}
 \end{figure}
 
 \begin{figure}[H]
 \centering
-% \includegraphics[width=0.8\textwidth]{../results/lr1_roc_curve.png}
-\caption{Curba ROC pentru LR \#1}
-\label{fig:lr1-roc}
+\includegraphics[width=0.7\textwidth]{../results/lr1_training_loss.png}
+\caption{Evoluția loss-ului în timpul antrenării}
+\label{fig:lr1-loss}
 \end{figure}
 
 \subsection{Interpretarea Coeficienților}
 Coeficienții cu valori pozitive mari indică produse care cresc probabilitatea de a cumpăra Crazy Sauce, în timp ce coeficienții negativi indică produse care scad această probabilitate.
 
-% TODO: Add feature importance table
+\begin{table}[H]
+\centering
+\begin{tabular}{lcc}
+\toprule
+\textbf{Feature} & \textbf{Coeficient} & \textbf{Efect} \\
+\midrule
+distinct\_products & +0.7846 & POZITIV \\
+has\_Mac \& cheease & +0.3411 & POZITIV \\
+has\_Pepsi Cola 0.25L Doze & +0.2795 & POZITIV \\
+cart\_size & +0.2237 & POZITIV \\
+has\_Aqua Carpatica Minerala & +0.1547 & POZITIV \\
+\midrule
+has\_Breaded Chicken Schnitzel & -0.4179 & NEGATIV \\
+has\_Crazy Fries with Parmesan & -0.3659 & NEGATIV \\
+has\_Prigat Still Orange & -0.3309 & NEGATIV \\
+has\_Breaded Pork Schnitzel & -0.2659 & NEGATIV \\
+has\_Mac \& Cheese with Bacon & -0.2593 & NEGATIV \\
+\bottomrule
+\end{tabular}
+\caption{Top features pentru predicția Crazy Sauce}
+\label{tab:lr1-features}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{../results/lr1_feature_importance.png}
+\caption{Importanța features pentru LR \#1}
+\label{fig:lr1-features}
+\end{figure}
+
+\textbf{Interpretare}: Clienții cu coșuri mai diverse (distinct\_products mare) și care comandă Mac \& Cheese au o probabilitate mai mare să cumpere Crazy Sauce. Pe de altă parte, cei care comandă alt tip de schnitzel (Breaded Chicken sau Pork) nu mai cumpără Crazy Sauce.
 
 \subsection{Comparație cu Baseline}
-Baseline-ul (majority class) prezice întotdeauna clasa majoritară. Rezultatele arată că modelul nostru...
+Baseline-ul (majority class) ar prezice întotdeauna clasa majoritară (pozitivă = 53.2\%), obținând o accuracy de 53.2\%. Modelul nostru cu accuracy de 69.75\% depășește semnificativ baseline-ul.
 
 %==============================================================================
 \section{Logistic Regression \#2: Multi-Sauce Recommendation}
@@ -214,6 +302,13 @@ Pentru fiecare sos $s$ din lista de sosuri, am antrenat un model separat:
 \subsection{Pseudo-Recomandare}
 Pentru un coș dat (fără sos), calculăm $P(s | \text{coș})$ pentru fiecare sos și recomandăm Top-K sosuri cu probabilitatea cea mai mare.
 
+\textbf{Exemplu de recomandare} pentru un coș cu Crazy Schnitzel, French Fries, la ora 13:00:
+\begin{itemize}
+    \item Crazy Sauce: 21.7\% probabilitate
+    \item Cheddar Sauce: 3.9\% probabilitate
+    \item Garlic Sauce: 3.9\% probabilitate
+\end{itemize}
+
 \subsection{Rezultate Comparative}
 
 \begin{table}[H]
@@ -222,31 +317,48 @@ Pentru un coș dat (fără sos), calculăm $P(s | \text{coș})$ pentru fiecare s
 \toprule
 \textbf{Sos} & \textbf{Base Rate} & \textbf{Accuracy} & \textbf{Precision} & \textbf{Recall} & \textbf{F1} \\
 \midrule
-Crazy Sauce & -- & -- & -- & -- & -- \\
-Cheddar Sauce & -- & -- & -- & -- & -- \\
-Garlic Sauce & -- & -- & -- & -- & -- \\
-% TODO: Complete table
+Crazy Sauce & 20.3\% & 0.8424 & 0.6291 & 0.5423 & 0.5825 \\
+Cheddar Sauce & 13.1\% & 0.8698 & 0.5094 & 0.1311 & 0.2085 \\
+Blueberry Sauce & 9.0\% & 0.9111 & 0.5294 & 0.1268 & 0.2045 \\
+Garlic Sauce & 9.4\% & 0.9041 & 0.4091 & 0.0612 & 0.1065 \\
+Spicy Sauce & 4.9\% & 0.9524 & 0.6667 & 0.0263 & 0.0506 \\
+Extra Cheddar Sauce & 0.3\% & 0.9968 & 0.0000 & 0.0000 & 0.0000 \\
+Tomato Sauce & 2.7\% & 0.9733 & 0.0000 & 0.0000 & 0.0000 \\
+Pink Sauce & 1.9\% & 0.9816 & 0.0000 & 0.0000 & 0.0000 \\
 \bottomrule
 \end{tabular}
 \caption{Performanța modelelor per sos}
 \label{tab:lr2-results}
 \end{table}
 
-\subsection{Evaluare Hit@K}
+\textbf{Observație}: Sosurile rare (Extra Cheddar, Tomato, Pink) au F1=0 deoarece modelul nu poate învăța suficiente pattern-uri din puținele exemple pozitive.
+
+\subsection{Top Features pentru Fiecare Sos}
 
 \begin{table}[H]
 \centering
-\begin{tabular}{lccc}
+\small
+\begin{tabular}{ll}
 \toprule
-\textbf{Metodă} & \textbf{Hit@1} & \textbf{Hit@3} & \textbf{Hit@5} \\
+\textbf{Sos} & \textbf{Top 3 Features (pozitive)} \\
 \midrule
-Model LR & -- & -- & -- \\
-Baseline (Popularity) & -- & -- & -- \\
+Crazy Sauce & distinct\_products (+0.59), has\_Crazy Schnitzel (+0.56), has\_Mac (+0.31) \\
+Cheddar Sauce & distinct\_products (+0.45), cart\_size (+0.30), has\_Breaded Chicken (+0.28) \\
+Blueberry Sauce & distinct\_products (+0.43), has\_Viennese Schnitzel (+0.39), cart\_size (+0.18) \\
+Garlic Sauce & distinct\_products (+0.50), cart\_size (+0.37), has\_Breaded Chicken (+0.21) \\
+Spicy Sauce & distinct\_products (+0.30), has\_Viennese Schnitzel (+0.29), has\_Pepsi (+0.13) \\
 \bottomrule
 \end{tabular}
-\caption{Hit@K pentru recomandare sosuri}
-\label{tab:hit-at-k}
+\caption{Top features per sos}
+\label{tab:lr2-features}
 \end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{../results/lr2_performance_heatmap.png}
+\caption{Heatmap performanță multi-sauce}
+\label{fig:lr2-heatmap}
+\end{figure}
 
 %==============================================================================
 \section{Ranking pentru Upselling}
@@ -255,12 +367,54 @@ Baseline (Popularity) & -- & -- & -- \\
 \subsection{Formularea Problemei}
 Scopul este de a construi o metodă care produce o ierarhie de produse candidate pentru upselling.
 
+\subsubsection{Produse Candidate}
+Am selectat 30 de produse pentru ranking: 8 sosuri, 11 băuturi și 11 garnituri.
+
 \subsubsection{Scor de Ranking}
 \begin{equation}
 \text{Score}(p | \text{coș}) = P(p | \text{coș}) \times \text{price}(p)
 \end{equation}
 
-Acest scor maximizează valoarea așteptată a vânzărilor.
+Acest scor maximizează valoarea așteptată a vânzărilor (Expected Value).
+
+\subsection{Top Produse după Expected Value}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Produs} & \textbf{Preț} & \textbf{P(cumparare)} & \textbf{Expected Value} \\
+\midrule
+Mac \& cheease & 32.9 & 28.4\% & 9.34 RON \\
+Breaded Chicken Schnitzel & 27.9 & 24.7\% & 6.90 RON \\
+Crazy Schnitzel & 28.9 & 22.7\% & 6.55 RON \\
+Viennese Schnitzel & 48.9 & 8.6\% & 4.19 RON \\
+Mac \& Cheese with Bacon & 25.9 & 14.6\% & 3.77 RON \\
+\bottomrule
+\end{tabular}
+\caption{Top 5 produse după Expected Value general}
+\label{tab:ranking-ev}
+\end{table}
+
+\subsection{Upsell pentru Crazy Schnitzel}
+Pentru clienții care comandă Crazy Schnitzel, cele mai bune recomandări sunt:
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lccc}
+\toprule
+\textbf{Produs} & \textbf{P(condițională)} & \textbf{Expected Value} \\
+\midrule
+Mac \& cheease & 49.4\% & 16.24 RON \\
+Baked potatoes & 36.8\% & 4.75 RON \\
+Pepsi Cola 0.25L & 36.2\% & 4.35 RON \\
+Crazy Sauce & 53.2\% & 3.67 RON \\
+Aqua Carpatica 0.5L & 25.9\% & 2.46 RON \\
+\bottomrule
+\end{tabular}
+\caption{Top upsell pentru Crazy Schnitzel}
+\label{tab:ranking-crazy}
+\end{table}
 
 \subsection{Algoritmi Implementați}
 
@@ -286,10 +440,12 @@ unde $w_i = \frac{1}{d(x, x_i)}$ pentru voting ponderat.
 \subsection{Experimental Setup}
 Pentru evaluare, pentru fiecare bon din test:
 \begin{enumerate}
-    \item Construim un "coș parțial" eliminând 1 produs
-    \item Încercăm să recuperăm produsul prin ranking
+    \item Construim un "coș parțial" eliminând 1 produs din cele 30 candidate
+    \item Folosim algoritmul de ranking pentru a genera Top-K recomandări
     \item Verificăm dacă produsul eliminat apare în Top-K
 \end{enumerate}
+
+\textbf{Dataset}: Training set: 6,295 bonuri; Test set: 1,574 bonuri (200 evaluate).
 
 \subsection{Rezultate}
 
@@ -299,15 +455,48 @@ Pentru evaluare, pentru fiecare bon din test:
 \toprule
 \textbf{Algoritm} & \textbf{Hit@1} & \textbf{Hit@3} & \textbf{Hit@5} & \textbf{MRR} \\
 \midrule
-Naive Bayes (scratch) & -- & -- & -- & -- \\
-k-NN (scratch) & -- & -- & -- & -- \\
-Baseline (Popularity) & -- & -- & -- & -- \\
-Baseline (Revenue) & -- & -- & -- & -- \\
+Naive Bayes (scratch) & 0.0060 & 0.0302 & 0.0967 & 0.0307 \\
+k-NN (scratch) & 0.0000 & 0.4125 & 0.5750 & 0.2104 \\
+\textbf{Popularity Baseline} & \textbf{0.2205} & \textbf{0.4441} & \textbf{0.6586} & \textbf{0.3635} \\
+Revenue Baseline & 0.2024 & 0.3263 & 0.6163 & 0.3177 \\
 \bottomrule
 \end{tabular}
 \caption{Performanța algoritmilor de ranking}
 \label{tab:ranking-results}
 \end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{../results/ranking_comparison.png}
+\caption{Comparație algoritmi de ranking}
+\label{fig:ranking-comparison}
+\end{figure}
+
+\subsection{Exemple de Recomandări}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{p{5cm}p{7cm}c}
+\toprule
+\textbf{Produse în coș} & \textbf{Top 3 Naive Bayes} & \textbf{Hit?} \\
+\midrule
+Breaded Chicken Schnitzel, Crazy Schnitzel, Extra parmezan, Aqua, Blueberry Sauce & Crazy Fries Cheddar bacon (25.9), Crazy Fries Parmesan (24.9), Baked potatoes (12.9) & $\checkmark$ \\
+\midrule
+Viennese Schnitzel, Crazy Fries Parmesan, Extra bacon, Pepsi Zero, Blueberry Sauce & Crazy Fries Cheddar bacon (25.9), Crazy Fries Parmesan (24.9), Baked potatoes (12.9) & $\checkmark$ \\
+\bottomrule
+\end{tabular}
+\caption{Exemple de recomandări cu Naive Bayes}
+\label{tab:ranking-examples}
+\end{table}
+
+\subsection{Discuție Rezultate}
+\textbf{De ce Popularity Baseline bate algoritmii from scratch?}
+\begin{itemize}
+    \item \textbf{Curse of dimensionality}: Cu 35 features și ~6,000 exemple, algoritmii estimează prost probabilitățile
+    \item \textbf{Class imbalance}: Produsele rare au puține exemple pozitive
+    \item \textbf{Simplicitate}: Popularitatea globală e un semnal puternic în retail
+\end{itemize}
 
 %==============================================================================
 \section{Concluzii}
@@ -315,17 +504,27 @@ Baseline (Revenue) & -- & -- & -- & -- \\
 
 \subsection{Rezultate Principale}
 \begin{itemize}
-    \item Pentru predicția Crazy Sauce, modelul de Logistic Regression atins...
-    \item Sistemul de recomandare multi-sos...
-    \item Ranking-ul bazat pe Expected Value...
+    \item \textbf{LR \#1}: Modelul de Logistic Regression from scratch atinge un F1-score de 0.76 pentru predicția Crazy Sauce, depășind baseline-ul de majority class cu 16.5 puncte procentuale (accuracy 69.75\% vs 53.2\%).
+    
+    \item \textbf{LR \#2}: Sistemul de recomandare multi-sos funcționează bine pentru sosurile populare (Crazy Sauce F1=0.58), dar are dificultăți cu sosurile rare (Extra Cheddar, Tomato, Pink cu F1=0).
+    
+    \item \textbf{Ranking}: Popularity Baseline obține cele mai bune rezultate (Hit@5=0.66, MRR=0.36), depășind algoritmii from scratch. Acest rezultat e consistent cu literatura de specialitate în sisteme de recomandare.
 \end{itemize}
+
+\subsection{Ce Am Învățat}
+\begin{enumerate}
+    \item Feature-ul \texttt{distinct\_products} este cel mai predictiv pentru toate sosurile
+    \item Există corelații puternice între tipul de schnitzel și sosul ales
+    \item Baseline-urile simple sunt competitivi în setări cu date limitate
+\end{enumerate}
 
 \subsection{Direcții de Îmbunătățire}
 \begin{enumerate}
-    \item Utilizarea de features suplimentare (sezonalitate, historicul clientului)
-    \item Ensemble methods (combinarea mai multor algoritmi)
-    \item Optimizarea hiperparametrilor prin cross-validation
-    \item Implementarea unui sistem online de recomandare
+    \item \textbf{Features suplimentare}: sezonalitate, time-series, cross-sell patterns
+    \item \textbf{Ensemble methods}: combinarea Naive Bayes + k-NN + Popularity
+    \item \textbf{Matrix Factorization}: pentru capturarea pattern-urilor latente
+    \item \textbf{Deep Learning}: rețele neurale pentru embedding produse
+    \item \textbf{Cross-validation}: pentru optimizarea hiperparametrilor
 \end{enumerate}
 
 %==============================================================================
@@ -333,8 +532,8 @@ Baseline (Revenue) & -- & -- & -- & -- \\
 %==============================================================================
 
 \begin{itemize}
-    \item \textbf{[Nume 1]}: Implementare Logistic Regression, preprocesare date, EDA
-    \item \textbf{[Nume 2]}: Implementare Ranking (Naive Bayes, k-NN), evaluare, raport
+    \item \textbf{Elisa Mercas}: Implementare Logistic Regression from scratch, preprocesare date, EDA, notebook-uri 01-03
+    \item \textbf{Denis Munteanu}: Implementare Ranking (Naive Bayes, k-NN from scratch), evaluare Hit@K, notebook-uri 04-05, raport LaTeX
 \end{itemize}
 
 %==============================================================================
@@ -347,24 +546,50 @@ Baseline (Revenue) & -- & -- & -- & -- \\
 # Install dependencies
 pip install -r requirements.txt
 
-# Run notebooks
+# Run notebooks in order
 jupyter notebook notebooks/
+
+# Notebooks order: 01_eda -> 02_lr_crazy_sauce -> 
+#                  03_lr_multi_sauce -> 04_ranking_upsell -> 05_ranking_ml
 \end{lstlisting}
 
 \subsection{Structura Repository}
 \begin{verbatim}
-├── data/raw/           # Dataset
+├── data/raw/           # Dataset (ap_dataset.csv)
 ├── data/processed/     # Preprocessed features
 ├── src/                # Source code
 │   ├── data_loader.py
 │   ├── preprocessing.py
 │   └── models/
-│       ├── logistic_regression.py
-│       ├── evaluation.py
-│       └── ranking.py
-├── notebooks/          # Jupyter notebooks
-├── results/            # Generated figures
+│       ├── logistic_regression.py  # LR from scratch
+│       ├── evaluation.py           # Metrics
+│       └── ranking.py              # NB + k-NN from scratch
+├── notebooks/          # Jupyter notebooks (5 files)
+├── results/            # Generated figures (24 PNG files)
 └── report/             # LaTeX report
 \end{verbatim}
+
+\subsection{Figuri Suplimentare}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{../results/top_products.png}
+\caption{Top produse după vânzări}
+\label{fig:top-products}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{../results/sauce_popularity.png}
+\caption{Popularitatea sosurilor}
+\label{fig:sauce-popularity}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{../results/daily_sales.png}
+\caption{Vânzări pe zile}
+\label{fig:daily-sales}
+\end{figure}
 
 \end{document}
