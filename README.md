@@ -24,7 +24,6 @@ Fisierul `ap_dataset.csv` trebuie sa fie in `data/raw/`
 
 ### Pas 3: Porneste Jupyter
 ```bash
-cd C:\Users\Elisa\Desktop\Practical-Assignment-Machine-Learning-2025-Fall
 python -m jupyter notebook notebooks/
 ```
 
