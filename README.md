@@ -5,7 +5,7 @@
 Aplicam algoritmi de Machine Learning pe date de vanzari dintr-un restaurant pentru a:
 - Prezice daca un client va cumpara un sos
 - Recomanda sosuri pe baza cosului de cumparaturi
-- Ranka produse pentru upselling
+- Clasa produse pentru upselling
 
 ## Autori
 Elisa Mercas & Denis Munteanu
