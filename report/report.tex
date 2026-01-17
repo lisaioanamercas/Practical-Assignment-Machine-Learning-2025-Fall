@@ -238,14 +238,37 @@ Specificity & 0.4611 \\
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.7\textwidth]{../results/lr1_confusion_matrix.png}
+\includegraphics[width=0.7\textwidth]{results/lr1_confusion_matrix.png}
 \caption{Matricea de confuzie pentru LR \#1}
 \label{fig:lr1-confusion}
 \end{figure}
 
+\subsubsection{ROC Curve și AUC}
+Pentru a evalua capacitatea modelului de a discrimina între clase, am calculat curba ROC și scorul AUC.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lc}
+\toprule
+\textbf{Metrică} & \textbf{Valoare} \\
+\midrule
+ROC-AUC & 0.7142 \\
+\bottomrule
+\end{tabular}
+\caption{ROC-AUC pentru LR \#1}
+\label{tab:lr1-auc}
+\end{table}
+
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.7\textwidth]{../results/lr1_training_loss.png}
+\includegraphics[width=0.7\textwidth]{results/lr1_roc_curve.png}
+\caption{Curba ROC pentru LR \#1. AUC de 0.71 indică o capacitate bună de discriminare, semnificativ peste baseline-ul aleator (AUC=0.5).}
+\label{fig:lr1-roc}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.7\textwidth]{results/lr1_training_loss.png}
 \caption{Evoluția loss-ului în timpul antrenării}
 \label{fig:lr1-loss}
 \end{figure}
@@ -278,7 +301,7 @@ has\_Mac \& Cheese with Bacon & -0.2593 & NEGATIV \\
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.9\textwidth]{../results/lr1_feature_importance.png}
+\includegraphics[width=0.9\textwidth]{results/lr1_feature_importance.png}
 \caption{Importanța features pentru LR \#1}
 \label{fig:lr1-features}
 \end{figure}
@@ -308,6 +331,32 @@ Pentru un coș dat (fără sos), calculăm $P(s | \text{coș})$ pentru fiecare s
     \item Cheddar Sauce: 3.9\% probabilitate
     \item Garlic Sauce: 3.9\% probabilitate
 \end{itemize}
+
+\subsection{Evaluare Hit@K pentru Recomandare}
+Am evaluat sistemul de recomandare folosind metrica Hit@K: pentru fiecare bon de test care conține un sos, verificăm dacă sosul real apare în Top-K recomandări.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lccc}
+\toprule
+\textbf{Metodă} & \textbf{Hit@1} & \textbf{Hit@3} & \textbf{Hit@5} \\
+\midrule
+LR Recommendation & 0.4320 & 0.7720 & 0.9400 \\
+Popularity Baseline & 0.3780 & 0.7440 & 0.9320 \\
+\bottomrule
+\end{tabular}
+\caption{Comparație Hit@K: LR Recommendation vs Popularity Baseline}
+\label{tab:lr2-hitk}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{results/lr2_hitk_comparison.png}
+\caption{Comparație Hit@K între sistemul LR și baseline-ul de popularitate}
+\label{fig:lr2-hitk}
+\end{figure}
+
+\textbf{Observație}: Sistemul LR depășește baseline-ul de popularitate la toate metricile, în special la Hit@1 (43.2\% vs 37.8\%), demonstrând că folosirea features contextuale (conținutul coșului, tipul de schnitzel) aduce valoare adăugată față de recomandarea simplă bazată pe popularitate globală. La Hit@5, ambele sisteme ating performanțe foarte bune (>93\%).
 
 \subsection{Rezultate Comparative}
 
@@ -355,7 +404,7 @@ Spicy Sauce & distinct\_products (+0.30), has\_Viennese Schnitzel (+0.29), has\_
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.9\textwidth]{../results/lr2_performance_heatmap.png}
+\includegraphics[width=0.9\textwidth]{results/lr2_performance_heatmap.png}
 \caption{Heatmap performanță multi-sauce}
 \label{fig:lr2-heatmap}
 \end{figure}
@@ -467,7 +516,7 @@ Revenue Baseline & 0.2024 & 0.3263 & 0.6163 & 0.3177 \\
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.8\textwidth]{../results/ranking_comparison.png}
+\includegraphics[width=0.8\textwidth]{results/ranking_comparison.png}
 \caption{Comparație algoritmi de ranking}
 \label{fig:ranking-comparison}
 \end{figure}
@@ -511,11 +560,21 @@ Viennese Schnitzel, Crazy Fries Parmesan, Extra bacon, Pepsi Zero, Blueberry Sau
     \item \textbf{Ranking}: Popularity Baseline obține cele mai bune rezultate (Hit@5=0.66, MRR=0.36), depășind algoritmii from scratch. Acest rezultat e consistent cu literatura de specialitate în sisteme de recomandare.
 \end{itemize}
 
-\subsection{Ce Am Învățat}
+\subsection{Variante Încercate și Lecții Învățate}
+\textbf{Ce nu a funcționat bine:}
+\begin{itemize}
+    \item \textbf{Learning rate prea mare (>0.5)}: convergență instabilă, oscilații în loss
+    \item \textbf{Fără regularizare L2}: overfitting pe setul de antrenare
+    \item \textbf{Features de interacțiune}: am încercat produse carteziene (ex. Schnitzel × Drink), dar au crescut dimensionalitatea fără beneficiu semnificativ
+    \item \textbf{One-hot encoding pentru ore}: mai puțin eficient decât ora ca feature numeric
+\end{itemize}
+
+\textbf{Ce am învățat:}
 \begin{enumerate}
     \item Feature-ul \texttt{distinct\_products} este cel mai predictiv pentru toate sosurile
     \item Există corelații puternice între tipul de schnitzel și sosul ales
     \item Baseline-urile simple sunt competitivi în setări cu date limitate
+    \item Normalizarea features (z-score) este esențială pentru convergența gradient descent
 \end{enumerate}
 
 \subsection{Direcții de Îmbunătățire}
@@ -573,21 +632,21 @@ jupyter notebook notebooks/
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.8\textwidth]{../results/top_products.png}
+\includegraphics[width=0.8\textwidth]{results/top_products.png}
 \caption{Top produse după vânzări}
 \label{fig:top-products}
 \end{figure}
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.8\textwidth]{../results/sauce_popularity.png}
+\includegraphics[width=0.8\textwidth]{results/sauce_popularity.png}
 \caption{Popularitatea sosurilor}
 \label{fig:sauce-popularity}
 \end{figure}
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.8\textwidth]{../results/daily_sales.png}
+\includegraphics[width=0.8\textwidth]{results/daily_sales.png}
 \caption{Vânzări pe zile}
 \label{fig:daily-sales}
 \end{figure}

@@ -239,8 +239,11 @@ def roc_auc_score(y_true: np.ndarray, y_proba: np.ndarray) -> float:
     fpr_sorted = fpr[sorted_indices]
     tpr_sorted = tpr[sorted_indices]
     
-    # Trapezoidal rule for AUC
-    auc = np.trapz(tpr_sorted, fpr_sorted)
+    # Trapezoidal rule for AUC (np.trapezoid in numpy 2.0+, np.trapz in older versions)
+    try:
+        auc = np.trapezoid(tpr_sorted, fpr_sorted)
+    except AttributeError:
+        auc = np.trapz(tpr_sorted, fpr_sorted)
     
     return auc
 
